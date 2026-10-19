@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dapur Antar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="bar">
+  <div class="wrap">
+    <a class="brand" href="#top"><span class="brand-dot" aria-hidden="true"></span>Dapur Antar</a>
+    <nav class="nav" aria-label="Main navigation">
+      <a href="#menu">Menu</a>
+      <a href="#how-to-order">How to order</a>
+      <a href="#area">Delivery areas</a>
+      <a href="#faq">FAQ</a>
+      <a href="#contact">Contact</a>
+    </nav>
+    <div class="guest" id="guestBox">
+      <button class="btn-sm" id="loginBtn" type="button">Log in</button>
+      <button class="btn-sm solid" id="registerBtn" type="button">Sign up</button>
+    </div>
+    <div class="userbox" id="userBox" hidden>
+      <button class="ubtn" id="userBtn" type="button" aria-haspopup="true" aria-expanded="false">
+        <span class="avatar" id="uInit" aria-hidden="true">A</span><span class="nm" id="uName">Account</span>
+      </button>
+      <div class="umenu" id="userMenu" hidden>
+        <div class="who" id="uMail"></div>
+        <button type="button" data-go="profile">My profile</button>
+        <button type="button" data-go="history">Order history</button>
+        <button type="button" data-go="logout">Log out</button>
+      </div>
+    </div>
+    <button class="cart-btn" id="cartBtn" type="button" aria-haspopup="dialog">
+      Cart <span class="count" id="cartCount">0</span>
+    </button>
+  </div>
+</header>
+
+<main id="top">
+  <div id="homeView">
+  <div class="wrap">
+    <div class="hero">
+      <div>
+        <p class="label">Food delivery in Jakarta</p>
+        <h1 style="margin-top:14px">Lunch arrives <span class="hl">before</span> your stomach complains.</h1>
+        <p class="lead">Dapur Antar brings food from local eateries and home kitchens straight to your desk or doorstep. Pick a dish, pay, then keep an eye on your courier.</p>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="#menu">Pick a dish</a>
+          <a class="btn btn-ghost" href="#how-to-order">How to order</a>
+        </div>
+        <div class="facts">
+          <div class="fact"><b>25-40 min</b><span>estimated delivery</span></div>
+          <div class="fact"><b>Rp75.000</b><span>free delivery</span></div>
+          <div class="fact"><b>QRIS &amp; cash</b><span>payment options</span></div>
+        </div>
+      </div>
+
+      <div class="receipt-wrap" aria-label="Sample order receipt">
+        <div class="receipt">
+          <h2>DAPUR ANTAR</h2>
+          <p class="sub">Sample receipt #DA-2410</p>
+          <hr>
+          <div class="rows">
+            <div class="row"><span>1x Nasi Ayam Penyet</span><span>32.000</span></div>
+            <div class="row"><span>2x Es Teh Tarik</span><span>24.000</span></div>
+            <div class="row" style="color:var(--muted)"><span>Delivery fee Menteng</span><span>8.000</span></div>
+            <div class="row" style="color:var(--muted)"><span>Service fee</span><span>2.000</span></div>
+          </div>
+          <hr>
+          <div class="row total"><span>TOTAL</span><span>Rp66.000</span></div>
+          <div class="row" style="margin-top:6px;color:var(--muted)"><span>Paid with</span><span>QRIS</span></div>
+          <div class="eta">Arrives in about 33-43 minutes</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <section id="promo" aria-labelledby="promoTitle" style="padding-block: 0 24px">
+      <div class="sec-head"><h2 id="promoTitle">Vouchers for you</h2><p>Apply in your cart before paying.</p></div>
+      <div class="vouchers">
+        <div class="vcard"><span class="vcode mono">NEW20</span><p>Rp20.000 off your first order, minimum spend Rp60.000. Account required.</p><button class="btn-sm" type="button" data-voucher="NEW20">Use code</button></div>
+        <div class="vcard"><span class="vcode mono">SAVE10</span><p>10% off up to Rp15.000, minimum spend Rp50.000.</p><button class="btn-sm" type="button" data-voucher="SAVE10">Use code</button></div>
+        <div class="vcard"><span class="vcode mono">FREESHIP</span><p>Free delivery to all areas, minimum spend Rp40.000.</p><button class="btn-sm" type="button" data-voucher="FREESHIP">Use code</button></div>
+      </div>
+    </section>
+
+    <section id="menu" aria-labelledby="menuTitle">
+      <div class="sec-head">
+        <h2 id="menuTitle">Today's menu</h2>
+        <p id="menuCount" class="mono"></p>
+      </div>
+      <div class="tools">
+        <div class="chips" id="chips" role="group" aria-label="Menu categories"></div>
+        <div class="search">
+          <label class="label" for="searchInput" style="display:none">Search menu</label>
+          <input type="text" id="searchInput" placeholder="Search the menu, e.g. satay" autocomplete="off">
+        </div>
+      </div>
+      <div class="grid" id="grid"></div>
+    </section>
+
+    <section id="how-to-order" aria-labelledby="howTitle">
+      <div class="sec-head"><h2 id="howTitle">How to order</h2></div>
+      <ol class="steps">
+        <li><span class="n">01</span><h3>Pick a dish</h3><p>Mix several categories in a single order. One courier delivers everything.</p></li>
+        <li><span class="n">02</span><h3>Enter your address and pay</h3><p>Pay with QRIS, GoPay, OVO, Dana, or cash to the courier.</p></li>
+        <li><span class="n">03</span><h3>Receive at your door</h3><p>Delivery time depends on your area and how long your chosen dishes take to cook.</p></li>
+      </ol>
+    </section>
+
+    <section id="area" aria-labelledby="areaTitle">
+      <div class="sec-head"><h2 id="areaTitle">Delivery areas</h2><p>Free delivery for subtotals from Rp75.000.</p></div>
+      <div class="tablebox">
+        <table>
+          <thead><tr><th>Area</th><th class="num">Delivery from</th><th class="num">Fee</th></tr></thead>
+          <tbody id="areaRows"></tbody>
+        </table>
+      </div>
+      <p class="note">Delivery times do not include cooking time. The slowest dish in your order sets the final estimate.</p>
+    </section>
+
+    <section id="faq" aria-labelledby="faqTitle">
+      <div class="sec-head"><h2 id="faqTitle">Frequently asked questions</h2></div>
+      <div class="faq">
+        <details><summary>How long does an order take to arrive?</summary><p>On average 25 to 40 minutes after the order is confirmed, depending on your delivery area and how long the dishes take to cook. The final estimate appears on your receipt after you order.</p></details>
+        <details><summary>Is there a minimum order?</summary><p>There is no minimum order. Free delivery applies to subtotals from Rp75.000, and some vouchers have their own minimum spend.</p></details>
+        <details><summary>How can I pay?</summary><p>QRIS, GoPay, OVO, Dana, and cash to the courier are available. Choose a method in your cart before pressing the order button.</p></details>
+        <details><summary>Can I cancel an order?</summary><p>Yes, as long as the restaurant has not started cooking. Open Order history in your account, then tap Cancel on an order that is still awaiting confirmation.</p></details>
+        <details><summary>My order is wrong or late. What should I do?</summary><p>Contact us through the form in the Contact section and mention your receipt number. We will look into the order.</p></details>
+        <details><summary>Is my account data safe?</summary><p>This is a demo site. Accounts, orders, and carts are stored only in this browser and are never sent to any server. Do not use your real password.</p></details>
+      </div>
+    </section>
+
+    <section id="contact" aria-labelledby="contactTitle">
+      <div class="contact">
+        <div>
+          <h2 id="contactTitle" style="font-size:clamp(1.75rem,4vw,2.5rem);font-weight:800">Contact us</h2>
+          <p class="muted" style="margin-top:12px;max-width:40ch">Have a problem with an order, or want your eatery to join? Send a message and our team replies during working hours.</p>
+          <dl>
+            <div><dt>Email</dt><dd>hello@dapurantar.example</dd></div>
+            <div><dt>Phone</dt><dd>(021) 555-0134</dd></div>
+            <div><dt>Service hours</dt><dd>Every day, 08:00-22:00 WIB</dd></div>
+          </dl>
+        </div>
+        <form class="panel stack" id="contactForm" novalidate>
+          <div class="field"><label for="k-name">Name</label><input type="text" id="k-name" autocomplete="name"><p class="fe" id="k-name-e"></p></div>
+          <div class="field"><label for="k-email">Email</label><input type="email" id="k-email" autocomplete="email"><p class="fe" id="k-email-e"></p></div>
+          <div class="field"><label for="k-msg">Message</label><textarea id="k-msg" placeholder="Include your receipt number if this is about an order"></textarea><p class="fe" id="k-msg-e"></p></div>
+          <button class="btn btn-primary" type="submit">Send message</button>
+          <p class="ok-msg" id="k-ok" role="status"></p>
+        </form>
+      </div>
+    </section>
+  </div>
+  </div>
+
+  <div id="accountView" hidden>
+    <div class="wrap">
+      <section aria-labelledby="aHello">
+        <div class="sec-head" style="margin-bottom:0">
+          <div><p class="label">My account</p><h2 id="aHello" style="margin-top:8px">Hello</h2><p class="mono muted" id="aMeta" style="margin-top:8px;overflow-wrap:anywhere"></p></div>
+          <button class="btn btn-ghost" id="aOut" type="button">Log out</button>
+        </div>
+        <div class="stats">
+          <div><b id="aCount">0</b><span>orders</span></div>
+          <div><b id="aSpent" class="mono">Rp0</b><span>total spent</span></div>
+        </div>
+        <div class="tabs" role="tablist" id="acctTabs">
+          <button type="button" role="tab" id="tabProfile" aria-selected="true" data-tab="profile">Profile</button>
+          <button type="button" role="tab" id="tabHistory" aria-selected="false" data-tab="history">Order history</button>
+        </div>
+
+        <div class="acct-wrap" id="profilePanel">
+          <form class="panel stack" id="profileForm" novalidate>
+            <h3 style="font-size:1.25rem">Personal details</h3>
+            <div class="pgrid">
+              <div class="field"><label for="p-name">Full name</label><input type="text" id="p-name" autocomplete="name"><p class="fe" id="p-name-e"></p></div>
+              <div class="field"><label for="p-phone">Phone number</label><input type="tel" id="p-phone" placeholder="0812 3456 7890" autocomplete="tel"><p class="fe" id="p-phone-e"></p></div>
+              <div class="field full"><label for="p-addr">Primary delivery address</label><input type="text" id="p-addr" placeholder="Jl. Cikini Raya No. 10, 3rd floor" autocomplete="street-address"></div>
+              <div class="field full"><label for="p-area">Area</label><select id="p-area"></select></div>
+            </div>
+            <button class="btn btn-primary" type="submit" style="justify-self:start">Save profile</button>
+          </form>
+          <form class="panel stack" id="passwordForm" novalidate>
+            <h3 style="font-size:1.25rem">Change password</h3>
+            <div class="pgrid">
+              <div class="field"><label for="c-old">Current password</label><input type="password" id="c-old" autocomplete="current-password"><p class="fe" id="c-old-e"></p></div>
+              <div class="field"><label for="c-new">New password</label><input type="password" id="c-new" autocomplete="new-password"><p class="fe" id="c-new-e"></p></div>
+            </div>
+            <button class="btn btn-ghost" type="submit" style="justify-self:start">Change password</button>
+          </form>
+        </div>
+
+        <div class="acct-wrap" id="historyPanel" hidden>
+          <div id="history" aria-live="polite"></div>
+        </div>
+      </section>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap" style="display:block">
+    <div class="cols">
+      <div>
+        <b style="color:var(--fg);font-family:var(--font-display);font-size:1.15rem">Dapur Antar</b>
+        <p style="margin-top:8px;max-width:38ch">Food delivery from local eateries and home kitchens in Jakarta. Pay with QRIS, e-wallet, or cash.</p>
+      </div>
+      <div>
+        <h3>Explore</h3>
+        <ul>
+          <li><a href="#menu">Menu</a></li>
+          <li><a href="#promo">Vouchers</a></li>
+          <li><a href="#how-to-order">How to order</a></li>
+          <li><a href="#area">Delivery areas</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3>Help</h3>
+        <ul>
+          <li><a href="#faq">Frequently asked questions</a></li>
+          <li><a href="#contact">Contact us</a></li>
+        </ul>
+      </div>
+    </div>
+    <p class="legal">Demo site. Menus, prices, accounts, and figures are for illustration only, and data is stored only in this browser.</p>
+  </div>
+</footer>
+
+<div class="scrim top" id="authScrim" hidden></div>
+<div class="modal" id="authModal" role="dialog" aria-modal="true" aria-labelledby="authTitle" hidden>
+  <div class="m-head">
+    <h2 id="authTitle">Log in</h2>
+    <button class="x" id="authClose" type="button" aria-label="Close">&times;</button>
+  </div>
+  <div class="tabs" role="tablist" id="authTabs">
+    <button type="button" role="tab" id="tabLogin" aria-selected="true" data-mode="login">Log in</button>
+    <button type="button" role="tab" id="tabRegister" aria-selected="false" data-mode="register">Sign up</button>
+  </div>
+  <p class="amsg" id="authMsg"></p>
+
+  <form class="stack" id="loginForm" novalidate>
+    <div class="field"><label for="l-email">Email</label><input type="email" id="l-email" autocomplete="email" placeholder="name@email.com"><p class="fe" id="l-email-e"></p></div>
+    <div class="field"><label for="l-pw">Password</label>
+      <div class="pw"><input type="password" id="l-pw" autocomplete="current-password"><button type="button" class="pwt" data-for="l-pw" aria-pressed="false">Show</button></div>
+      <p class="fe" id="l-pw-e"></p></div>
+    <button type="button" class="linkbtn" id="toForgot">Forgot password?</button>
+    <button class="btn btn-primary" type="submit">Log in</button>
+    <p class="muted" style="font-size:0.9rem">Don't have an account? <button type="button" class="linkbtn" data-mode="register">Sign up free</button></p>
+  </form>
+
+  <form class="stack" id="registerForm" novalidate hidden>
+    <div class="field"><label for="r-name">Full name</label><input type="text" id="r-name" autocomplete="name"><p class="fe" id="r-name-e"></p></div>
+    <div class="field"><label for="r-email">Email</label><input type="email" id="r-email" autocomplete="email" placeholder="name@email.com"><p class="fe" id="r-email-e"></p></div>
+    <div class="field"><label for="r-phone">Phone number</label><input type="tel" id="r-phone" autocomplete="tel" placeholder="0812 3456 7890"><p class="fe" id="r-phone-e"></p></div>
+    <div class="field"><label for="r-pw">Password</label>
+      <div class="pw"><input type="password" id="r-pw" autocomplete="new-password"><button type="button" class="pwt" data-for="r-pw" aria-pressed="false">Show</button></div>
+      <p class="fe" id="r-pw-e"></p>
+      <p class="muted" style="font-size:0.8rem">At least 8 characters, with letters and numbers.</p></div>
+    <div class="field"><label for="r-pw2">Repeat password</label><input type="password" id="r-pw2" autocomplete="new-password"><p class="fe" id="r-pw2-e"></p></div>
+    <div class="field"><label class="check" style="text-transform:none;letter-spacing:0;font-weight:500;color:var(--fg);font-size:0.9rem"><input type="checkbox" id="r-terms"><span>I agree to the Dapur Antar terms of use.</span></label><p class="fe" id="r-terms-e"></p></div>
+    <button class="btn btn-primary" type="submit">Create account</button>
+    <p class="muted" style="font-size:0.9rem">Already have an account? <button type="button" class="linkbtn" data-mode="login">Log in</button></p>
+  </form>
+
+  <form class="stack" id="forgotForm" novalidate hidden>
+    <p class="muted" style="font-size:0.92rem">Enter your account email. We will send a link to create a new password.</p>
+    <div class="field"><label for="f-email">Email</label><input type="email" id="f-email" autocomplete="email"><p class="fe" id="f-email-e"></p></div>
+    <button class="btn btn-primary" type="submit">Send link</button>
+    <p class="ok-msg" id="f-ok" role="status"></p>
+    <button type="button" class="linkbtn" data-mode="login">Back to log in</button>
+  </form>
+
+  <p class="demo-note">Demo site. Accounts are stored only in this browser and no emails are sent. Do not use your real password.</p>
+</div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<div class="scrim" id="scrim" hidden></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drTitle" aria-hidden="true">
+  <form id="checkout" novalidate>
+    <div id="cartView" style="display:flex;flex-direction:column;min-height:0;flex:1">
+      <div class="dr-head">
+        <h2 id="drTitle">Cart</h2>
+        <button class="x" id="closeBtn" type="button" aria-label="Close cart">&times;</button>
+      </div>
+      <div class="dr-body">
+        <div class="free" id="free" hidden>
+          <span id="freeText"></span>
+          <div class="meter" aria-hidden="true"><i id="freeBar"></i></div>
+        </div>
+        <div class="lines" id="lines"></div>
+        <div class="field">
+          <label for="voucherCode">Voucher code</label>
+          <div class="vrow">
+            <input type="text" id="voucherCode" placeholder="Example: SAVE10" autocomplete="off" autocapitalize="characters">
+            <button class="btn-sm" type="button" id="vApply">Apply</button>
+            <button class="btn-sm" type="button" id="vClear" hidden>Remove</button>
+          </div>
+          <p class="vmsg" id="vMsg" aria-live="polite"></p>
+        </div>
+        <p class="hint" id="loginHint">You are not logged in. <button type="button" class="linkbtn" id="hintLogin">Log in or sign up</button> so your address and order history are saved.</p>
+        <div class="field">
+          <label for="address">Delivery address</label>
+          <input type="text" id="address" placeholder="Jl. Cikini Raya No. 10, 3rd floor" autocomplete="street-address">
+        </div>
+        <div class="field">
+          <label for="area-sel">Area</label>
+          <select id="area-sel"></select>
+        </div>
+        <fieldset class="field">
+          <legend>Payment</legend>
+          <div class="pays" id="pays"></div>
+        </fieldset>
+        <p class="err" id="err" role="alert"></p>
+      </div>
+      <div class="dr-foot">
+        <div class="row mono"><span>Subtotal</span><span id="tSub"></span></div>
+        <div class="row mono"><span>Delivery fee</span><span id="tShip"></span></div>
+        <div class="row mono"><span>Service fee</span><span id="tSvc"></span></div>
+        <div class="row mono" id="rowDisc" hidden><span id="discLabel">Voucher</span><span id="tDisc"></span></div>
+        <div class="row mono grand"><span>Total</span><span id="tTotal"></span></div>
+        <button class="btn btn-primary" id="submitBtn" type="submit">Place order</button>
+      </div>
+    </div>
+
+    <div id="doneView" style="display:none;flex-direction:column;min-height:0;flex:1">
+      <div class="dr-head">
+        <h2>Order received</h2>
+        <button class="x" id="closeBtn2" type="button" aria-label="Close">&times;</button>
+      </div>
+      <div class="done">
+        <div class="receipt">
+          <h2>DAPUR ANTAR</h2>
+          <p class="sub" id="dNo"></p>
+          <hr>
+          <div class="rows" id="dRows"></div>
+          <hr>
+          <div class="row total"><span>TOTAL</span><span id="dTotal"></span></div>
+          <div class="row" style="margin-top:6px;color:var(--muted)"><span>Paid with</span><span id="dPay"></span></div>
+          <div class="eta" id="dEta"></div>
+        </div>
+        <p class="note" style="margin:0">This is a demo site, so no orders are actually processed.</p>
+        <button class="btn btn-primary" id="againBtn" type="button">Back to menu</button>
+      </div>
+    </div>
+  </form>
+</aside>
+
+<script src="app.js"></script>
+</body>
+</html>
