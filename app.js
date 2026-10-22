@@ -10,7 +10,7 @@
     { n: 'Kelapa Gading', base: 35, fee: 10000 },
     { n: 'Pantai Indah Kapuk', base: 40, fee: 12000 }
   ];
-  var PAYS = ['QRIS', 'GoPay', 'OVO', 'Dana', 'Cash to courier'];
+  var PAYS = ['QRIS', 'GoPay', 'OVO', 'DANA', 'ShopeePay', 'Cash to courier'];
   var CATS = ['All', 'Rice', 'Noodles & Meatballs', 'Satay & Grill', 'Snacks', 'Drinks'];
   var SPICE = ['Not spicy', 'Mildly spicy', 'Spicy', 'Very spicy'];
   var D = [
@@ -216,6 +216,21 @@
   $('pays').innerHTML = PAYS.map(function (p, i) {
     return '<label class="pay"><input type="radio" name="pay" value="' + esc(p) + '"' + (i === 0 ? ' checked' : '') + '><span>' + esc(p) + '</span></label>';
   }).join('');
+  function updatePaymentInfo() {
+    var selected = document.querySelector('input[name="pay"]:checked');
+    var method = selected ? selected.value : 'QRIS';
+    var messages = {
+      'QRIS': '<strong>QRIS checkout (demo)</strong><p>In a production app, your payment provider generates a unique QR code for this order. No QR is generated and no payment is collected on this demo.</p>',
+      'GoPay': '<strong>GoPay checkout (demo)</strong><p>Production checkout would redirect to a payment provider or open the GoPay payment flow. This demo does not initiate a transaction.</p>',
+      'OVO': '<strong>OVO checkout (demo)</strong><p>Production checkout would request an OVO payment through a payment gateway. This demo does not send a payment request.</p>',
+      'DANA': '<strong>DANA checkout (demo)</strong><p>Production checkout would redirect to DANA through a payment gateway. This demo does not initiate a transaction.</p>',
+      'ShopeePay': '<strong>ShopeePay checkout (demo)</strong><p>Production checkout would create a payment session with a gateway. This demo does not initiate a transaction.</p>',
+      'Cash to courier': '<strong>Cash on delivery</strong><p>In a real service, pay the courier when the order arrives. This demo does not dispatch a courier.</p>'
+    };
+    $('paymentInfo').innerHTML = messages[method] || messages.QRIS;
+  }
+  $('pays').addEventListener('change', updatePaymentInfo);
+  updatePaymentInfo();
   $('area-sel').addEventListener('change', function () { areaTouched = true; renderCart(); });
 
   /* Drawer */
@@ -263,6 +278,7 @@
     var lo = c.area.base + c.prep;
     addOrder({
       no: no, t: Date.now(), area: c.area.n, lo: lo, prep: c.prep, pay: pay, total: c.total, addr: addr,
+      notes: $('deliveryNotes').value.trim(), status: 'Order received',
       items: Object.keys(cart).map(function (id) { return { id: id, n: byId[id].n, q: cart[id], p: byId[id].p }; })
     });
     var rows = Object.keys(cart).map(function (id) {
@@ -275,11 +291,23 @@
     $('dRows').innerHTML = rows;
     $('dTotal').textContent = rp(c.total);
     $('dPay').textContent = pay;
-    $('dEta').textContent = 'Arrives in about ' + lo + '-' + (lo + 10) + ' minutes';
+    $('dEta').textContent = 'Estimated arrival in about ' + lo + '-' + (lo + 10) + ' minutes';
+    var mapQuery = encodeURIComponent(addr);
+    $('trackingMap').src = 'https://maps.google.com/maps?q=' + mapQuery + '&output=embed';
+    $('openMap').href = 'https://www.google.com/maps/dir/?api=1&destination=' + mapQuery;
+    $('trackStatus').textContent = 'Order received';
+    $('trackMessage').textContent = 'Order ' + no + ' is saved in this browser. Status below is a simulated demo timeline.';
+    $('trackingSteps').querySelectorAll('span').forEach(function (step, i) {
+      step.classList.toggle('active', i === 0);
+    });
+    $('deliveryNotes').value = '';
     cart = {}; save(); voucher = ''; $('voucherCode').value = '';
     renderGrid(); renderCart();
     $('cartView').style.display = 'none'; $('doneView').style.display = 'flex';
     $('againBtn').focus();
+  });
+  $('trackingSteps').querySelectorAll('span').forEach(function (step, i) {
+    step.title = ['Order received', 'Preparing', 'On the way', 'Delivered'][i];
   });
   $('againBtn').addEventListener('click', function () {
     cart = {}; save(); renderGrid(); renderCart(); closeDrawer();

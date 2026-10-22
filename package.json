@@ -1,0 +1,14 @@
+{
+  "name": "dapur-antar-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Demo REST API for Dapur Antar food delivery project",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}

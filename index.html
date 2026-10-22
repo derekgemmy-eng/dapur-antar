@@ -314,9 +314,17 @@
           <select id="area-sel"></select>
         </div>
         <fieldset class="field">
-          <legend>Payment</legend>
+          <legend>Payment method</legend>
           <div class="pays" id="pays"></div>
+          <div id="paymentInfo" class="payment-info" aria-live="polite">
+            <strong>Demo payment</strong>
+            <p>Select QRIS or an e-wallet to see the checkout instructions. No real payment will be charged.</p>
+          </div>
         </fieldset>
+        <div class="field">
+          <label for="deliveryNotes">Delivery instructions (optional)</label>
+          <input type="text" id="deliveryNotes" placeholder="Gate code, floor, landmark…">
+        </div>
         <p class="err" id="err" role="alert"></p>
       </div>
       <div class="dr-foot">
@@ -345,7 +353,17 @@
           <div class="row" style="margin-top:6px;color:var(--muted)"><span>Paid with</span><span id="dPay"></span></div>
           <div class="eta" id="dEta"></div>
         </div>
-        <p class="note" style="margin:0">This is a demo site, so no orders are actually processed.</p>
+        <section class="tracking-panel" aria-labelledby="trackingTitle">
+          <div class="tracking-heading"><h3 id="trackingTitle">Delivery tracking</h3><span class="pill go" id="trackStatus">Order confirmed</span></div>
+          <p id="trackMessage">Your order status will appear here.</p>
+          <div class="tracking-steps" id="trackingSteps">
+            <span class="active">Order received</span><span>Preparing</span><span>On the way</span><span>Delivered</span>
+          </div>
+          <iframe id="trackingMap" title="Map to delivery address" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="about:blank"></iframe>
+          <p class="map-note">Map shows the delivery destination, not a live courier location. Live GPS tracking requires a courier app/backend integration.</p>
+          <a id="openMap" class="btn btn-ghost map-link" target="_blank" rel="noopener noreferrer" href="https://maps.google.com/">Open route in Google Maps</a>
+        </section>
+        <p class="note" style="margin:0">Demo only: no real payments, restaurant dispatch, or live courier GPS is connected.</p>
         <button class="btn btn-primary" id="againBtn" type="button">Back to menu</button>
       </div>
     </div>

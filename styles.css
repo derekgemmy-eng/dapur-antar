@@ -356,3 +356,19 @@ footer .legal { margin-top: 28px; padding-top: 18px; border-top: 1px solid var(-
   html { scroll-behavior: auto; }
   .drawer, .meter i { transition: none; }
 }
+
+
+/* Checkout payment guidance and destination map / tracking */
+.payment-info { margin-top: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); font-size: .88rem; }
+.payment-info p { margin-top: 5px; color: var(--muted); line-height: 1.45; }
+.tracking-panel { display: grid; gap: 12px; margin: 16px 0; padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.tracking-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.tracking-heading h3 { margin: 0; font-size: 1.05rem; }
+.tracking-panel > p { margin: 0; color: var(--muted); font-size: .9rem; }
+.tracking-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.tracking-steps span { padding: 8px 5px; border-radius: 8px; text-align: center; font-size: .72rem; color: var(--muted); background: var(--surface-2); border: 1px solid var(--line); }
+.tracking-steps span.active { color: var(--text); border-color: var(--accent, #d97736); font-weight: 700; }
+#trackingMap { display: block; width: 100%; height: 230px; border: 0; border-radius: 10px; background: var(--surface-2); }
+.map-note { font-size: .78rem !important; }
+.map-link { text-align: center; justify-content: center; }
+@media (max-width: 420px) { .tracking-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
