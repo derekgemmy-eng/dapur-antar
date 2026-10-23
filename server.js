@@ -1,5 +1,6 @@
 const express = require('express');
 const crypto = require('crypto');
+const path = require('path');
 const app = express();
 app.use(express.json({ limit: '1mb' }));
 app.use((req,res,next)=>{ res.set('Access-Control-Allow-Origin','*'); res.set('Access-Control-Allow-Headers','Content-Type, Authorization, x-webhook-secret'); res.set('Access-Control-Allow-Methods','GET,POST,PUT,PATCH,DELETE,OPTIONS'); if(req.method==='OPTIONS') return res.sendStatus(204); next(); });
@@ -123,6 +124,7 @@ app.post('/api/v1/payments',(req,res)=>{const {orderId,method}=req.body||{};cons
 app.get('/api/v1/payments/:paymentId',auth,(req,res)=>{const p=payments.get(req.params.paymentId);if(!p)return fail(res,404,'Payment not found');const o=orders.get(p.orderId);if(!o||o.email!==req.user.email)return fail(res,403,'You cannot access this payment');ok(res,p);});
 app.post('/api/v1/webhooks/payment',(req,res)=>{if(req.get('x-webhook-secret')!==WEBHOOK_SECRET)return fail(res,401,'Invalid webhook secret');const {paymentId,status}=req.body||{};const p=payments.get(paymentId);if(!p)return fail(res,404,'Payment not found');if(!['PAID','FAILED','CANCELLED'].includes(status))return fail(res,400,'status must be PAID, FAILED, or CANCELLED');p.status=status;const o=orders.get(p.orderId);if(o)o.paymentStatus=status;ok(res,{paymentId,status,orderId:p.orderId});});
 app.patch('/api/v1/orders/:orderId/status',(req,res)=>{if(req.get('x-webhook-secret')!==WEBHOOK_SECRET)return fail(res,401,'Admin/webhook secret required');const o=orders.get(req.params.orderId);if(!o)return fail(res,404,'Order not found');const {status,message}=req.body||{};if(!['CONFIRMED','PREPARING','PICKED_UP','ON_THE_WAY','DELIVERED','CANCELLED'].includes(status))return fail(res,400,'Unsupported order status');o.status=status;o.tracking.status=status;o.tracking.events.push({status,at:new Date().toISOString(),message:message||status.replaceAll('_',' ').toLowerCase()});ok(res,{orderId:o.orderId,status,tracking:o.tracking});});
+app.use('/docs', express.static(path.join(__dirname,'docs')));
 app.use((req,res)=>fail(res,404,'Endpoint not found'));
 app.use((err,req,res,next)=>{console.error(err);fail(res,500,'Internal server error');});
 app.listen(PORT,()=>console.log(`Dapur Antar API running at http://localhost:${PORT}`));

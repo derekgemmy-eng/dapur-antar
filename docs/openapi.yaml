@@ -1,0 +1,956 @@
+openapi: 3.0.3
+info:
+  title: Dapur Antar API
+  version: 1.0.0
+  description: |
+    REST API demo untuk aplikasi pesan-antar makanan **Dapur Antar** (proyek kuliah).
+
+    **Format respons** (semua endpoint):
+    - Sukses: `{ "status": "success", "data": { ... } }`
+    - Gagal: `{ "status": "error", "message": "...", "details": { ... } }` (`details` opsional)
+
+    **Autentikasi**: login lewat `POST /api/v1/auth/login`, ambil `data.token`, lalu klik tombol **Authorize** dan isi token (tanpa kata `Bearer`).
+
+    **Catatan demo**
+    - Data disimpan di memori; reset setiap server restart.
+    - Pembayaran hanya simulasi (sandbox), tidak ada pemotongan uang sungguhan.
+    - Tracking berbasis status pesanan, bukan GPS kurir.
+    - Endpoint webhook dan update status memakai header `x-webhook-secret` (default demo: `demo-webhook-secret`, dapat diubah lewat env `WEBHOOK_SECRET`).
+  contact:
+    name: Dapur Antar
+servers:
+  - url: http://localhost:3000
+    description: Server lokal
+tags:
+  - name: Health
+  - name: Authentication
+  - name: Profile
+  - name: Menu
+  - name: Cart
+  - name: Promotions
+  - name: Locations
+  - name: Orders
+  - name: Tracking
+  - name: Payments
+  - name: Webhook & Admin
+
+paths:
+  /api/health:
+    get:
+      tags: [Health]
+      summary: Cek status layanan
+      operationId: getHealth
+      responses:
+        '200':
+          description: Layanan berjalan
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          service: { type: string, example: Dapur Antar API }
+                          version: { type: string, example: 1.0.0 }
+                          timestamp: { type: string, format: date-time }
+
+  /api/v1/auth/register:
+    post:
+      tags: [Authentication]
+      summary: Daftar akun baru
+      operationId: register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, phone, password]
+              properties:
+                name: { type: string, example: Test User }
+                email: { type: string, format: email, example: test1@example.com }
+                phone: { type: string, example: '081234567890' }
+                password: { type: string, minLength: 8, example: TestPass123 }
+      responses:
+        '201':
+          description: Akun dibuat
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          userId: { type: string, example: usr_a1b2c3d4e5 }
+        '400':
+          description: Field kosong, email tidak valid, atau password kurang dari 8 karakter
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              examples:
+                weakPassword:
+                  value: { status: error, message: Password must be at least 8 characters }
+        '409':
+          description: Email sudah terdaftar
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { status: error, message: Email is already registered }
+
+  /api/v1/auth/login:
+    post:
+      tags: [Authentication]
+      summary: Login dan dapatkan bearer token
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email, example: test1@example.com }
+                password: { type: string, example: TestPass123 }
+      responses:
+        '200':
+          description: Login berhasil
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          user: { $ref: '#/components/schemas/UserPublic' }
+                          token: { type: string, example: 9f2c...64 karakter hex }
+                          tokenType: { type: string, example: Bearer }
+                          expiresIn: { type: integer, example: 86400, description: Detik (informatif; server demo tidak menegakkan kedaluwarsa) }
+        '401':
+          description: Email atau password salah
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { status: error, message: Invalid email or password }
+
+  /api/v1/profile:
+    get:
+      tags: [Profile]
+      summary: Lihat profil pengguna
+      operationId: getProfile
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Profil
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/Profile' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    put:
+      tags: [Profile]
+      summary: Ubah profil (parsial)
+      description: Hanya field yang dikirim yang diubah. Email tidak dapat diubah.
+      operationId: updateProfile
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string, example: Budi Santoso }
+                phone: { type: string, example: '081298765432' }
+                address: { type: string, example: Jl. Sudirman No. 45, Jakarta }
+      responses:
+        '200':
+          description: Profil diperbarui
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/Profile' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/v1/menu:
+    get:
+      tags: [Menu]
+      summary: Daftar menu (filter, cari, urutkan)
+      operationId: listMenu
+      parameters:
+        - name: category
+          in: query
+          description: Nama kategori (tidak peka huruf besar/kecil). `all` = semua.
+          schema:
+            type: string
+            enum: [all, Rice, Noodles & Meatballs, Satay & Grill, Snacks, Drinks]
+        - name: search
+          in: query
+          description: Cari pada nama dan deskripsi
+          schema: { type: string, example: ayam }
+        - name: sort
+          in: query
+          schema: { type: string, enum: [price_asc, price_desc] }
+      responses:
+        '200':
+          description: |
+            Daftar menu. Perhatikan struktur bersarang: daftar item ada di `data.data`.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          count: { type: integer, example: 2 }
+                          data:
+                            type: array
+                            items: { $ref: '#/components/schemas/MenuItem' }
+
+  /api/v1/menu/{id}:
+    get:
+      tags: [Menu]
+      summary: Detail satu menu
+      operationId: getMenuItem
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, example: n1 }
+      responses:
+        '200':
+          description: Detail menu
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/MenuItem' }
+        '404':
+          description: Menu tidak ditemukan
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { status: error, message: Menu item not found }
+
+  /api/v1/cart:
+    get:
+      tags: [Cart]
+      summary: Lihat keranjang
+      operationId: getCart
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Isi keranjang
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/Cart' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    delete:
+      tags: [Cart]
+      summary: Kosongkan keranjang
+      operationId: clearCart
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Keranjang dikosongkan
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/Cart' }
+              example:
+                status: success
+                data: { items: [], subtotal: 0 }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/v1/cart/items:
+    post:
+      tags: [Cart]
+      summary: Tambah item ke keranjang
+      description: Jika item sudah ada, jumlah ditambahkan (maksimal total 20 per item).
+      operationId: addCartItem
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [menuItemId, quantity]
+              properties:
+                menuItemId: { type: string, example: n1 }
+                quantity: { type: integer, minimum: 1, maximum: 20, example: 2 }
+                customizations:
+                  type: array
+                  items: { type: string }
+                  example: []
+      responses:
+        '201':
+          description: Item ditambahkan; mengembalikan isi keranjang terbaru
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/Cart' }
+        '400':
+          description: quantity bukan integer 1-20, atau total melebihi 20
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { status: error, message: quantity must be an integer from 1 to 20 }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404':
+          description: Menu tidak ditemukan atau tidak tersedia
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { status: error, message: Menu item not found or unavailable }
+
+  /api/v1/cart/items/{menuItemId}:
+    patch:
+      tags: [Cart]
+      summary: Ubah jumlah item (0 = hapus)
+      operationId: updateCartItem
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: menuItemId
+          in: path
+          required: true
+          schema: { type: string, example: n1 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [quantity]
+              properties:
+                quantity: { type: integer, minimum: 0, maximum: 20, example: 3 }
+      responses:
+        '200':
+          description: Keranjang diperbarui
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/Cart' }
+        '400':
+          description: quantity bukan integer 0-20
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404':
+          description: Item tidak ada di keranjang
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { status: error, message: Cart item not found }
+
+  /api/v1/promotions/apply:
+    post:
+      tags: [Promotions]
+      summary: Validasi dan hitung voucher
+      description: |
+        Voucher yang tersedia:
+
+        | Kode | Minimum | Efek |
+        |---|---|---|
+        | `SAVE10` | Rp50.000 | Diskon 10%, maksimal Rp15.000 |
+        | `FREESHIP` | Rp40.000 | Gratis ongkir (`deliveryDiscount` = 1) |
+        | `NEW20` | Rp60.000 | Potongan Rp20.000 |
+      operationId: applyPromotion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [promoCode, cartSubtotal]
+              properties:
+                promoCode: { type: string, example: SAVE10 }
+                cartSubtotal: { type: number, example: 56000 }
+      responses:
+        '200':
+          description: Voucher valid
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          valid: { type: boolean, example: true }
+                          promoCode: { type: string, example: SAVE10 }
+                          discountAmount: { type: integer, example: 5600 }
+                          deliveryDiscount: { type: integer, description: '1 jika gratis ongkir, selain itu 0', example: 0 }
+                          minimumSpend: { type: integer, example: 50000 }
+                          finalSubtotal: { type: integer, example: 50400 }
+        '400':
+          description: Kode tidak valid atau subtotal di bawah minimum
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              examples:
+                invalidCode:
+                  value: { status: error, message: Invalid promotion code }
+                belowMinimum:
+                  value:
+                    status: error
+                    message: Cart subtotal does not meet the promotion minimum
+                    details: { minimumSpend: 50000 }
+
+  /api/v1/locations:
+    get:
+      tags: [Locations]
+      summary: Daftar area pengantaran
+      operationId: listLocations
+      parameters:
+        - name: area
+          in: query
+          description: Filter nama area (mengandung teks, tidak peka huruf besar/kecil)
+          schema: { type: string, example: kemang }
+      responses:
+        '200':
+          description: Daftar area. Item ada di `data.data`.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          count: { type: integer, example: 8 }
+                          data:
+                            type: array
+                            items: { $ref: '#/components/schemas/Area' }
+
+  /api/v1/orders:
+    post:
+      tags: [Orders]
+      summary: Buat pesanan dari isi keranjang (checkout)
+      description: |
+        Aturan harga:
+        - Ongkir gratis jika subtotal >= Rp75.000, selain itu mengikuti area.
+        - Biaya layanan tetap Rp2.000; pajak 0.
+        - Voucher opsional. Keranjang dikosongkan setelah pesanan dibuat.
+        - Metode selain `CASH` otomatis membuat payment berstatus `PENDING`.
+      operationId: createOrder
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [deliveryAddress, area, paymentMethod]
+              properties:
+                deliveryAddress: { type: string, example: 'Jl. Sudirman No. 45, Jakarta' }
+                area: { type: string, example: Menteng, description: Nama area dari /api/v1/locations }
+                paymentMethod: { $ref: '#/components/schemas/PaymentMethodAll' }
+                promoCode: { type: string, example: SAVE10 }
+                deliveryInstructions: { type: string, example: Call on arrival }
+      responses:
+        '201':
+          description: Pesanan dibuat
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          orderId: { type: string, example: DA-20261023-A1B2C3 }
+                          status: { $ref: '#/components/schemas/OrderStatus' }
+                          paymentStatus: { $ref: '#/components/schemas/PaymentStatusOrder' }
+                          paymentId: { type: string, nullable: true, example: PAY-1A2B3C4D }
+                          estimatedDeliveryMinutes: { type: integer, example: 35 }
+                          pricing: { $ref: '#/components/schemas/Pricing' }
+        '400':
+          description: Field wajib kosong, metode/area tidak didukung, keranjang kosong, atau voucher tidak valid
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              examples:
+                emptyCart:
+                  value: { status: error, message: Cart is empty }
+                badArea:
+                  value: { status: error, message: Delivery area is not supported }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    get:
+      tags: [Orders]
+      summary: Riwayat pesanan milik pengguna
+      operationId: listOrders
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Daftar pesanan (terbaru lebih dulu). Item ada di `data.data`.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          count: { type: integer, example: 1 }
+                          data:
+                            type: array
+                            items: { $ref: '#/components/schemas/Order' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/v1/orders/{orderId}:
+    get:
+      tags: [Orders]
+      summary: Detail pesanan
+      operationId: getOrder
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      responses:
+        '200':
+          description: Detail pesanan
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/Order' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/ForbiddenOrder' }
+        '404': { $ref: '#/components/responses/OrderNotFound' }
+
+  /api/v1/orders/{orderId}/tracking:
+    get:
+      tags: [Tracking]
+      summary: Lacak status pesanan
+      description: Berbasis status. `liveCourierGpsAvailable` selalu `false` pada versi demo.
+      operationId: getTracking
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      responses:
+        '200':
+          description: Status dan riwayat event
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          orderId: { type: string, example: DA-20261023-A1B2C3 }
+                          status: { $ref: '#/components/schemas/OrderStatus' }
+                          events:
+                            type: array
+                            items: { $ref: '#/components/schemas/TrackingEvent' }
+                          deliveryAddress: { type: string }
+                          liveCourierGpsAvailable: { type: boolean, example: false }
+                          message: { type: string, example: Demo tracking only; live courier GPS is not connected. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/ForbiddenOrder' }
+        '404': { $ref: '#/components/responses/OrderNotFound' }
+
+  /api/v1/orders/{orderId}/status:
+    patch:
+      tags: [Webhook & Admin]
+      summary: Ubah status pesanan (admin demo)
+      description: Membutuhkan header `x-webhook-secret`. Tidak memakai bearer token.
+      operationId: updateOrderStatus
+      security: [{ webhookSecret: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { $ref: '#/components/schemas/OrderStatus' }
+                message: { type: string, example: Kurir menuju lokasi Anda }
+      responses:
+        '200':
+          description: Status diperbarui
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          orderId: { type: string }
+                          status: { $ref: '#/components/schemas/OrderStatus' }
+                          tracking:
+                            type: object
+                            properties:
+                              status: { $ref: '#/components/schemas/OrderStatus' }
+                              events:
+                                type: array
+                                items: { $ref: '#/components/schemas/TrackingEvent' }
+        '400':
+          description: Status tidak didukung
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { status: error, message: Unsupported order status }
+        '401':
+          description: Secret salah atau tidak ada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { status: error, message: Admin/webhook secret required }
+        '404': { $ref: '#/components/responses/OrderNotFound' }
+
+  /api/v1/payments:
+    post:
+      tags: [Payments]
+      summary: Buat pembayaran sandbox untuk pesanan
+      description: |
+        **Simulasi saja** - tidak ada transaksi nyata. Endpoint ini tidak memakai bearer token pada implementasi saat ini.
+      operationId: createPayment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [orderId, method]
+              properties:
+                orderId: { type: string, example: DA-20261023-A1B2C3 }
+                method: { $ref: '#/components/schemas/PaymentMethodOnline' }
+      responses:
+        '201':
+          description: Payment sandbox dibuat
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        allOf:
+                          - $ref: '#/components/schemas/Payment'
+                          - type: object
+                            properties:
+                              message: { type: string, example: Sandbox placeholder only. No real payment was charged. }
+        '400':
+          description: Metode online tidak didukung
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { status: error, message: Unsupported online payment method }
+        '404': { $ref: '#/components/responses/OrderNotFound' }
+
+  /api/v1/payments/{paymentId}:
+    get:
+      tags: [Payments]
+      summary: Detail pembayaran
+      operationId: getPayment
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: paymentId
+          in: path
+          required: true
+          schema: { type: string, example: PAY-1A2B3C4D }
+      responses:
+        '200':
+          description: Detail pembayaran
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/Payment' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: Pembayaran milik pengguna lain
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { status: error, message: You cannot access this payment }
+        '404':
+          description: Pembayaran tidak ditemukan
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { status: error, message: Payment not found }
+
+  /api/v1/webhooks/payment:
+    post:
+      tags: [Webhook & Admin]
+      summary: Webhook status pembayaran (demo)
+      description: Membutuhkan header `x-webhook-secret`. Mengubah status payment dan `paymentStatus` pesanan.
+      operationId: paymentWebhook
+      security: [{ webhookSecret: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [paymentId, status]
+              properties:
+                paymentId: { type: string, example: PAY-1A2B3C4D }
+                status: { type: string, enum: [PAID, FAILED, CANCELLED], example: PAID }
+      responses:
+        '200':
+          description: Status pembayaran diperbarui
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          paymentId: { type: string }
+                          status: { type: string, enum: [PAID, FAILED, CANCELLED] }
+                          orderId: { type: string }
+        '400':
+          description: status bukan PAID, FAILED, atau CANCELLED
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { status: error, message: 'status must be PAID, FAILED, or CANCELLED' }
+        '401':
+          description: Secret salah atau tidak ada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { status: error, message: Invalid webhook secret }
+        '404':
+          description: Pembayaran tidak ditemukan
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { status: error, message: Payment not found }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Token dari `POST /api/v1/auth/login` (`data.token`). Token opaque acak, bukan JWT.
+    webhookSecret:
+      type: apiKey
+      in: header
+      name: x-webhook-secret
+      description: Rahasia webhook/admin demo (env `WEBHOOK_SECRET`, default `demo-webhook-secret`).
+
+  parameters:
+    OrderId:
+      name: orderId
+      in: path
+      required: true
+      schema: { type: string, example: DA-20261023-A1B2C3 }
+
+  responses:
+    Unauthorized:
+      description: Token tidak ada atau tidak valid
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { status: error, message: Missing or invalid bearer token }
+    ForbiddenOrder:
+      description: Pesanan milik pengguna lain
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { status: error, message: You cannot access this order }
+    OrderNotFound:
+      description: Pesanan tidak ditemukan
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { status: error, message: Order not found }
+
+  schemas:
+    SuccessEnvelope:
+      type: object
+      properties:
+        status: { type: string, example: success }
+    Error:
+      type: object
+      properties:
+        status: { type: string, example: error }
+        message: { type: string }
+        details: { type: object, additionalProperties: true }
+    UserPublic:
+      type: object
+      properties:
+        id: { type: string, example: usr_a1b2c3d4e5 }
+        name: { type: string }
+        email: { type: string, format: email }
+        phone: { type: string }
+    Profile:
+      allOf:
+        - $ref: '#/components/schemas/UserPublic'
+        - type: object
+          properties:
+            address: { type: string, example: '' }
+    MenuItem:
+      type: object
+      properties:
+        id: { type: string, example: n1 }
+        category: { type: string, example: Rice }
+        name: { type: string, example: Nasi Goreng Kampung }
+        description: { type: string }
+        price: { type: integer, description: Rupiah, example: 28000 }
+        stock: { type: integer, example: 50 }
+        cookMinutes: { type: integer, example: 10 }
+        available: { type: boolean, example: true }
+    CartItem:
+      type: object
+      properties:
+        menuItemId: { type: string, example: n1 }
+        name: { type: string, example: Nasi Goreng Kampung }
+        unitPrice: { type: integer, example: 28000 }
+        quantity: { type: integer, example: 2 }
+        customizations:
+          type: array
+          items: { type: string }
+        lineTotal: { type: integer, example: 56000 }
+    Cart:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/CartItem' }
+        subtotal: { type: integer, example: 56000 }
+    Area:
+      type: object
+      properties:
+        id: { type: string, example: a1 }
+        name: { type: string, example: Menteng }
+        etaMinutes: { type: integer, example: 25 }
+        deliveryFee: { type: integer, example: 8000 }
+    Pricing:
+      type: object
+      properties:
+        subtotal: { type: integer, example: 56000 }
+        discount: { type: integer, example: 5600 }
+        tax: { type: integer, example: 0 }
+        deliveryFee: { type: integer, example: 8000 }
+        serviceFee: { type: integer, example: 2000 }
+        totalAmount: { type: integer, example: 60400 }
+    OrderStatus:
+      type: string
+      enum: [CONFIRMED, PREPARING, PICKED_UP, ON_THE_WAY, DELIVERED, CANCELLED]
+    PaymentStatusOrder:
+      type: string
+      enum: [PENDING, PAY_ON_DELIVERY, PAID, FAILED, CANCELLED]
+    PaymentMethodAll:
+      type: string
+      description: Tidak peka huruf besar/kecil
+      enum: [QRIS, GOPAY, OVO, DANA, SHOPEEPAY, CASH]
+      example: QRIS
+    PaymentMethodOnline:
+      type: string
+      enum: [QRIS, GOPAY, OVO, DANA, SHOPEEPAY]
+      example: QRIS
+    TrackingEvent:
+      type: object
+      properties:
+        status: { $ref: '#/components/schemas/OrderStatus' }
+        at: { type: string, format: date-time }
+        message: { type: string, example: Order received by Dapur Antar }
+    Payment:
+      type: object
+      properties:
+        paymentId: { type: string, example: PAY-1A2B3C4D }
+        orderId: { type: string, example: DA-20261023-A1B2C3 }
+        method: { $ref: '#/components/schemas/PaymentMethodOnline' }
+        amount: { type: integer, example: 60400 }
+        status: { type: string, enum: [PENDING, PAID, FAILED, CANCELLED], example: PENDING }
+        createdAt: { type: string, format: date-time }
+        sandbox: { type: boolean, description: Hanya ada pada payment yang dibuat lewat POST /api/v1/payments, example: true }
+    Order:
+      type: object
+      properties:
+        orderId: { type: string, example: DA-20261023-A1B2C3 }
+        userId: { type: string }
+        email: { type: string, format: email }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/CartItem' }
+        deliveryAddress: { type: string }
+        area: { type: string, example: Menteng }
+        deliveryInstructions: { type: string }
+        paymentMethod: { $ref: '#/components/schemas/PaymentMethodAll' }
+        paymentStatus: { $ref: '#/components/schemas/PaymentStatusOrder' }
+        paymentId: { type: string }
+        demoPaymentInstructions: { type: string }
+        status: { $ref: '#/components/schemas/OrderStatus' }
+        createdAt: { type: string, format: date-time }
+        estimatedDeliveryMinutes: { type: integer, example: 35 }
+        pricing: { $ref: '#/components/schemas/Pricing' }
+        tracking:
+          type: object
+          properties:
+            status: { $ref: '#/components/schemas/OrderStatus' }
+            events:
+              type: array
+              items: { $ref: '#/components/schemas/TrackingEvent' }
