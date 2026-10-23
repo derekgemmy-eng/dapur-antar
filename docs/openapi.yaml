@@ -3,24 +3,24 @@ info:
   title: Dapur Antar API
   version: 1.0.0
   description: |
-    REST API demo untuk aplikasi pesan-antar makanan **Dapur Antar** (proyek kuliah).
+    Demo REST API for the **Dapur Antar** food delivery application (coursework project).
 
-    **Format respons** (semua endpoint):
-    - Sukses: `{ "status": "success", "data": { ... } }`
-    - Gagal: `{ "status": "error", "message": "...", "details": { ... } }` (`details` opsional)
+    **Response format** (all endpoints):
+    - Success: `{ "status": "success", "data": { ... } }`
+    - Error: `{ "status": "error", "message": "...", "details": { ... } }` (`details` is optional)
 
-    **Autentikasi**: login lewat `POST /api/v1/auth/login`, ambil `data.token`, lalu klik tombol **Authorize** dan isi token (tanpa kata `Bearer`).
+    **Authentication**: log in via `POST /api/v1/auth/login`, copy `data.token`, then click **Authorize** and paste the token (without the word `Bearer`).
 
-    **Catatan demo**
-    - Data disimpan di memori; reset setiap server restart.
-    - Pembayaran hanya simulasi (sandbox), tidak ada pemotongan uang sungguhan.
-    - Tracking berbasis status pesanan, bukan GPS kurir.
-    - Endpoint webhook dan update status memakai header `x-webhook-secret` (default demo: `demo-webhook-secret`, dapat diubah lewat env `WEBHOOK_SECRET`).
+    **Demo notes**
+    - Data is stored in memory and resets whenever the server restarts.
+    - Payments are simulated (sandbox only); no real money is charged.
+    - Tracking is based on order status, not live courier GPS.
+    - The webhook and order-status endpoints use the `x-webhook-secret` header (demo default: `demo-webhook-secret`, configurable via the `WEBHOOK_SECRET` environment variable).
   contact:
     name: Dapur Antar
 servers:
   - url: http://localhost:3000
-    description: Server lokal
+    description: Local server
 tags:
   - name: Health
   - name: Authentication
@@ -38,11 +38,11 @@ paths:
   /api/health:
     get:
       tags: [Health]
-      summary: Cek status layanan
+      summary: Check service health
       operationId: getHealth
       responses:
         '200':
-          description: Layanan berjalan
+          description: Service is running
           content:
             application/json:
               schema:
@@ -60,7 +60,7 @@ paths:
   /api/v1/auth/register:
     post:
       tags: [Authentication]
-      summary: Daftar akun baru
+      summary: Register a new account
       operationId: register
       requestBody:
         required: true
@@ -76,7 +76,7 @@ paths:
                 password: { type: string, minLength: 8, example: TestPass123 }
       responses:
         '201':
-          description: Akun dibuat
+          description: Account created
           content:
             application/json:
               schema:
@@ -89,7 +89,7 @@ paths:
                         properties:
                           userId: { type: string, example: usr_a1b2c3d4e5 }
         '400':
-          description: Field kosong, email tidak valid, atau password kurang dari 8 karakter
+          description: Missing field, invalid email, or password shorter than 8 characters
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -97,7 +97,7 @@ paths:
                 weakPassword:
                   value: { status: error, message: Password must be at least 8 characters }
         '409':
-          description: Email sudah terdaftar
+          description: Email already registered
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -106,7 +106,7 @@ paths:
   /api/v1/auth/login:
     post:
       tags: [Authentication]
-      summary: Login dan dapatkan bearer token
+      summary: Log in and obtain a bearer token
       operationId: login
       requestBody:
         required: true
@@ -120,7 +120,7 @@ paths:
                 password: { type: string, example: TestPass123 }
       responses:
         '200':
-          description: Login berhasil
+          description: Login successful
           content:
             application/json:
               schema:
@@ -132,11 +132,11 @@ paths:
                         type: object
                         properties:
                           user: { $ref: '#/components/schemas/UserPublic' }
-                          token: { type: string, example: 9f2c...64 karakter hex }
+                          token: { type: string, example: 9f2c... (64 hex characters) }
                           tokenType: { type: string, example: Bearer }
-                          expiresIn: { type: integer, example: 86400, description: Detik (informatif; server demo tidak menegakkan kedaluwarsa) }
+                          expiresIn: { type: integer, example: 86400, description: Seconds (informational; the demo server does not enforce expiry) }
         '401':
-          description: Email atau password salah
+          description: Wrong email or password
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -145,12 +145,12 @@ paths:
   /api/v1/profile:
     get:
       tags: [Profile]
-      summary: Lihat profil pengguna
+      summary: Get user profile
       operationId: getProfile
       security: [{ bearerAuth: [] }]
       responses:
         '200':
-          description: Profil
+          description: User profile
           content:
             application/json:
               schema:
@@ -162,8 +162,8 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
     put:
       tags: [Profile]
-      summary: Ubah profil (parsial)
-      description: Hanya field yang dikirim yang diubah. Email tidak dapat diubah.
+      summary: Update profile (partial)
+      description: Only the fields sent are changed. Email cannot be changed.
       operationId: updateProfile
       security: [{ bearerAuth: [] }]
       requestBody:
@@ -178,7 +178,7 @@ paths:
                 address: { type: string, example: Jl. Sudirman No. 45, Jakarta }
       responses:
         '200':
-          description: Profil diperbarui
+          description: Profile updated
           content:
             application/json:
               schema:
@@ -192,18 +192,18 @@ paths:
   /api/v1/menu:
     get:
       tags: [Menu]
-      summary: Daftar menu (filter, cari, urutkan)
+      summary: List menu (filter, search, sort)
       operationId: listMenu
       parameters:
         - name: category
           in: query
-          description: Nama kategori (tidak peka huruf besar/kecil). `all` = semua.
+          description: Category name (case-insensitive). `all` returns everything.
           schema:
             type: string
             enum: [all, Rice, Noodles & Meatballs, Satay & Grill, Snacks, Drinks]
         - name: search
           in: query
-          description: Cari pada nama dan deskripsi
+          description: Search in name and description
           schema: { type: string, example: ayam }
         - name: sort
           in: query
@@ -211,7 +211,7 @@ paths:
       responses:
         '200':
           description: |
-            Daftar menu. Perhatikan struktur bersarang: daftar item ada di `data.data`.
+            Menu list. Note the nested structure: the items are in `data.data`.
           content:
             application/json:
               schema:
@@ -230,7 +230,7 @@ paths:
   /api/v1/menu/{id}:
     get:
       tags: [Menu]
-      summary: Detail satu menu
+      summary: Get a single menu item
       operationId: getMenuItem
       parameters:
         - name: id
@@ -239,7 +239,7 @@ paths:
           schema: { type: string, example: n1 }
       responses:
         '200':
-          description: Detail menu
+          description: Menu item details
           content:
             application/json:
               schema:
@@ -249,7 +249,7 @@ paths:
                     properties:
                       data: { $ref: '#/components/schemas/MenuItem' }
         '404':
-          description: Menu tidak ditemukan
+          description: Menu item not found
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -258,12 +258,12 @@ paths:
   /api/v1/cart:
     get:
       tags: [Cart]
-      summary: Lihat keranjang
+      summary: Get cart
       operationId: getCart
       security: [{ bearerAuth: [] }]
       responses:
         '200':
-          description: Isi keranjang
+          description: Cart contents
           content:
             application/json:
               schema:
@@ -275,12 +275,12 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
     delete:
       tags: [Cart]
-      summary: Kosongkan keranjang
+      summary: Clear cart
       operationId: clearCart
       security: [{ bearerAuth: [] }]
       responses:
         '200':
-          description: Keranjang dikosongkan
+          description: Cart cleared
           content:
             application/json:
               schema:
@@ -297,8 +297,8 @@ paths:
   /api/v1/cart/items:
     post:
       tags: [Cart]
-      summary: Tambah item ke keranjang
-      description: Jika item sudah ada, jumlah ditambahkan (maksimal total 20 per item).
+      summary: Add an item to the cart
+      description: If the item is already in the cart, the quantity is added (maximum total of 20 per item).
       operationId: addCartItem
       security: [{ bearerAuth: [] }]
       requestBody:
@@ -317,7 +317,7 @@ paths:
                   example: []
       responses:
         '201':
-          description: Item ditambahkan; mengembalikan isi keranjang terbaru
+          description: Item added; returns the updated cart
           content:
             application/json:
               schema:
@@ -327,14 +327,14 @@ paths:
                     properties:
                       data: { $ref: '#/components/schemas/Cart' }
         '400':
-          description: quantity bukan integer 1-20, atau total melebihi 20
+          description: quantity is not an integer from 1 to 20, or the total exceeds 20
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
               example: { status: error, message: quantity must be an integer from 1 to 20 }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404':
-          description: Menu tidak ditemukan atau tidak tersedia
+          description: Menu item not found or unavailable
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -343,7 +343,7 @@ paths:
   /api/v1/cart/items/{menuItemId}:
     patch:
       tags: [Cart]
-      summary: Ubah jumlah item (0 = hapus)
+      summary: Update item quantity (0 = remove)
       operationId: updateCartItem
       security: [{ bearerAuth: [] }]
       parameters:
@@ -362,7 +362,7 @@ paths:
                 quantity: { type: integer, minimum: 0, maximum: 20, example: 3 }
       responses:
         '200':
-          description: Keranjang diperbarui
+          description: Cart updated
           content:
             application/json:
               schema:
@@ -372,13 +372,13 @@ paths:
                     properties:
                       data: { $ref: '#/components/schemas/Cart' }
         '400':
-          description: quantity bukan integer 0-20
+          description: quantity is not an integer from 0 to 20
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404':
-          description: Item tidak ada di keranjang
+          description: Item is not in the cart
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -387,15 +387,15 @@ paths:
   /api/v1/promotions/apply:
     post:
       tags: [Promotions]
-      summary: Validasi dan hitung voucher
+      summary: Validate and calculate a voucher
       description: |
-        Voucher yang tersedia:
+        Available vouchers:
 
-        | Kode | Minimum | Efek |
+        | Code | Minimum | Effect |
         |---|---|---|
-        | `SAVE10` | Rp50.000 | Diskon 10%, maksimal Rp15.000 |
-        | `FREESHIP` | Rp40.000 | Gratis ongkir (`deliveryDiscount` = 1) |
-        | `NEW20` | Rp60.000 | Potongan Rp20.000 |
+        | `SAVE10` | Rp50,000 | 10% discount, capped at Rp15,000 |
+        | `FREESHIP` | Rp40,000 | Free delivery (`deliveryDiscount` = 1) |
+        | `NEW20` | Rp60,000 | Rp20,000 off |
       operationId: applyPromotion
       requestBody:
         required: true
@@ -409,7 +409,7 @@ paths:
                 cartSubtotal: { type: number, example: 56000 }
       responses:
         '200':
-          description: Voucher valid
+          description: Voucher is valid
           content:
             application/json:
               schema:
@@ -423,11 +423,11 @@ paths:
                           valid: { type: boolean, example: true }
                           promoCode: { type: string, example: SAVE10 }
                           discountAmount: { type: integer, example: 5600 }
-                          deliveryDiscount: { type: integer, description: '1 jika gratis ongkir, selain itu 0', example: 0 }
+                          deliveryDiscount: { type: integer, description: '1 if free delivery, otherwise 0', example: 0 }
                           minimumSpend: { type: integer, example: 50000 }
                           finalSubtotal: { type: integer, example: 50400 }
         '400':
-          description: Kode tidak valid atau subtotal di bawah minimum
+          description: Invalid code or subtotal below the minimum
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -443,16 +443,16 @@ paths:
   /api/v1/locations:
     get:
       tags: [Locations]
-      summary: Daftar area pengantaran
+      summary: List delivery areas
       operationId: listLocations
       parameters:
         - name: area
           in: query
-          description: Filter nama area (mengandung teks, tidak peka huruf besar/kecil)
+          description: Filter by area name (substring match, case-insensitive)
           schema: { type: string, example: kemang }
       responses:
         '200':
-          description: Daftar area. Item ada di `data.data`.
+          description: Area list. Items are in `data.data`.
           content:
             application/json:
               schema:
@@ -471,13 +471,13 @@ paths:
   /api/v1/orders:
     post:
       tags: [Orders]
-      summary: Buat pesanan dari isi keranjang (checkout)
+      summary: Create an order from the cart (checkout)
       description: |
-        Aturan harga:
-        - Ongkir gratis jika subtotal >= Rp75.000, selain itu mengikuti area.
-        - Biaya layanan tetap Rp2.000; pajak 0.
-        - Voucher opsional. Keranjang dikosongkan setelah pesanan dibuat.
-        - Metode selain `CASH` otomatis membuat payment berstatus `PENDING`.
+        Pricing rules:
+        - Delivery is free if the subtotal is at least Rp75,000; otherwise the area's fee applies.
+        - Fixed service fee of Rp2,000; tax is 0.
+        - Voucher is optional. The cart is emptied after the order is created.
+        - Any method other than `CASH` automatically creates a payment with status `PENDING`.
       operationId: createOrder
       security: [{ bearerAuth: [] }]
       requestBody:
@@ -489,13 +489,13 @@ paths:
               required: [deliveryAddress, area, paymentMethod]
               properties:
                 deliveryAddress: { type: string, example: 'Jl. Sudirman No. 45, Jakarta' }
-                area: { type: string, example: Menteng, description: Nama area dari /api/v1/locations }
+                area: { type: string, example: Menteng, description: Area name from /api/v1/locations }
                 paymentMethod: { $ref: '#/components/schemas/PaymentMethodAll' }
                 promoCode: { type: string, example: SAVE10 }
                 deliveryInstructions: { type: string, example: Call on arrival }
       responses:
         '201':
-          description: Pesanan dibuat
+          description: Order created
           content:
             application/json:
               schema:
@@ -513,7 +513,7 @@ paths:
                           estimatedDeliveryMinutes: { type: integer, example: 35 }
                           pricing: { $ref: '#/components/schemas/Pricing' }
         '400':
-          description: Field wajib kosong, metode/area tidak didukung, keranjang kosong, atau voucher tidak valid
+          description: Missing required field, unsupported method or area, empty cart, or invalid voucher
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -525,12 +525,12 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
     get:
       tags: [Orders]
-      summary: Riwayat pesanan milik pengguna
+      summary: List the user's orders
       operationId: listOrders
       security: [{ bearerAuth: [] }]
       responses:
         '200':
-          description: Daftar pesanan (terbaru lebih dulu). Item ada di `data.data`.
+          description: Order list (newest first). Items are in `data.data`.
           content:
             application/json:
               schema:
@@ -550,14 +550,14 @@ paths:
   /api/v1/orders/{orderId}:
     get:
       tags: [Orders]
-      summary: Detail pesanan
+      summary: Get order details
       operationId: getOrder
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/OrderId'
       responses:
         '200':
-          description: Detail pesanan
+          description: Get order details
           content:
             application/json:
               schema:
@@ -573,15 +573,15 @@ paths:
   /api/v1/orders/{orderId}/tracking:
     get:
       tags: [Tracking]
-      summary: Lacak status pesanan
-      description: Berbasis status. `liveCourierGpsAvailable` selalu `false` pada versi demo.
+      summary: Track order status
+      description: Status-based. `liveCourierGpsAvailable` is always `false` in the demo version.
       operationId: getTracking
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/OrderId'
       responses:
         '200':
-          description: Status dan riwayat event
+          description: Status and event history
           content:
             application/json:
               schema:
@@ -607,8 +607,8 @@ paths:
   /api/v1/orders/{orderId}/status:
     patch:
       tags: [Webhook & Admin]
-      summary: Ubah status pesanan (admin demo)
-      description: Membutuhkan header `x-webhook-secret`. Tidak memakai bearer token.
+      summary: Update order status (demo admin)
+      description: Requires the `x-webhook-secret` header. Does not use a bearer token.
       operationId: updateOrderStatus
       security: [{ webhookSecret: [] }]
       parameters:
@@ -625,7 +625,7 @@ paths:
                 message: { type: string, example: Kurir menuju lokasi Anda }
       responses:
         '200':
-          description: Status diperbarui
+          description: Status updated
           content:
             application/json:
               schema:
@@ -646,13 +646,13 @@ paths:
                                 type: array
                                 items: { $ref: '#/components/schemas/TrackingEvent' }
         '400':
-          description: Status tidak didukung
+          description: Unsupported status
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
               example: { status: error, message: Unsupported order status }
         '401':
-          description: Secret salah atau tidak ada
+          description: Secret is wrong or missing
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -662,9 +662,9 @@ paths:
   /api/v1/payments:
     post:
       tags: [Payments]
-      summary: Buat pembayaran sandbox untuk pesanan
+      summary: Create a sandbox payment for an order
       description: |
-        **Simulasi saja** - tidak ada transaksi nyata. Endpoint ini tidak memakai bearer token pada implementasi saat ini.
+        **Simulation only** - no real transaction takes place. This endpoint does not require a bearer token in the current implementation.
       operationId: createPayment
       requestBody:
         required: true
@@ -678,7 +678,7 @@ paths:
                 method: { $ref: '#/components/schemas/PaymentMethodOnline' }
       responses:
         '201':
-          description: Payment sandbox dibuat
+          description: Sandbox payment created
           content:
             application/json:
               schema:
@@ -693,7 +693,7 @@ paths:
                             properties:
                               message: { type: string, example: Sandbox placeholder only. No real payment was charged. }
         '400':
-          description: Metode online tidak didukung
+          description: Unsupported online payment method
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -703,7 +703,7 @@ paths:
   /api/v1/payments/{paymentId}:
     get:
       tags: [Payments]
-      summary: Detail pembayaran
+      summary: Get payment details
       operationId: getPayment
       security: [{ bearerAuth: [] }]
       parameters:
@@ -713,7 +713,7 @@ paths:
           schema: { type: string, example: PAY-1A2B3C4D }
       responses:
         '200':
-          description: Detail pembayaran
+          description: Get payment details
           content:
             application/json:
               schema:
@@ -724,13 +724,13 @@ paths:
                       data: { $ref: '#/components/schemas/Payment' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403':
-          description: Pembayaran milik pengguna lain
+          description: Payment belongs to another user
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
               example: { status: error, message: You cannot access this payment }
         '404':
-          description: Pembayaran tidak ditemukan
+          description: Payment not found
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -739,8 +739,8 @@ paths:
   /api/v1/webhooks/payment:
     post:
       tags: [Webhook & Admin]
-      summary: Webhook status pembayaran (demo)
-      description: Membutuhkan header `x-webhook-secret`. Mengubah status payment dan `paymentStatus` pesanan.
+      summary: Payment status webhook (demo)
+      description: Requires the `x-webhook-secret` header. Updates the payment status and the order's `paymentStatus`.
       operationId: paymentWebhook
       security: [{ webhookSecret: [] }]
       requestBody:
@@ -755,7 +755,7 @@ paths:
                 status: { type: string, enum: [PAID, FAILED, CANCELLED], example: PAID }
       responses:
         '200':
-          description: Status pembayaran diperbarui
+          description: Payment status updated
           content:
             application/json:
               schema:
@@ -770,19 +770,19 @@ paths:
                           status: { type: string, enum: [PAID, FAILED, CANCELLED] }
                           orderId: { type: string }
         '400':
-          description: status bukan PAID, FAILED, atau CANCELLED
+          description: status is not PAID, FAILED, or CANCELLED
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
               example: { status: error, message: 'status must be PAID, FAILED, or CANCELLED' }
         '401':
-          description: Secret salah atau tidak ada
+          description: Secret is wrong or missing
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
               example: { status: error, message: Invalid webhook secret }
         '404':
-          description: Pembayaran tidak ditemukan
+          description: Payment not found
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -793,12 +793,12 @@ components:
     bearerAuth:
       type: http
       scheme: bearer
-      description: Token dari `POST /api/v1/auth/login` (`data.token`). Token opaque acak, bukan JWT.
+      description: Token from `POST /api/v1/auth/login` (`data.token`). Opaque random token, not a JWT.
     webhookSecret:
       type: apiKey
       in: header
       name: x-webhook-secret
-      description: Rahasia webhook/admin demo (env `WEBHOOK_SECRET`, default `demo-webhook-secret`).
+      description: Demo webhook/admin secret (env `WEBHOOK_SECRET`, default `demo-webhook-secret`).
 
   parameters:
     OrderId:
@@ -809,19 +809,19 @@ components:
 
   responses:
     Unauthorized:
-      description: Token tidak ada atau tidak valid
+      description: Token is missing or invalid
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
           example: { status: error, message: Missing or invalid bearer token }
     ForbiddenOrder:
-      description: Pesanan milik pengguna lain
+      description: Order belongs to another user
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
           example: { status: error, message: You cannot access this order }
     OrderNotFound:
-      description: Pesanan tidak ditemukan
+      description: Order not found
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
@@ -904,7 +904,7 @@ components:
       enum: [PENDING, PAY_ON_DELIVERY, PAID, FAILED, CANCELLED]
     PaymentMethodAll:
       type: string
-      description: Tidak peka huruf besar/kecil
+      description: Case-insensitive
       enum: [QRIS, GOPAY, OVO, DANA, SHOPEEPAY, CASH]
       example: QRIS
     PaymentMethodOnline:
@@ -926,7 +926,7 @@ components:
         amount: { type: integer, example: 60400 }
         status: { type: string, enum: [PENDING, PAID, FAILED, CANCELLED], example: PENDING }
         createdAt: { type: string, format: date-time }
-        sandbox: { type: boolean, description: Hanya ada pada payment yang dibuat lewat POST /api/v1/payments, example: true }
+        sandbox: { type: boolean, description: Only present on payments created via POST /api/v1/payments, example: true }
     Order:
       type: object
       properties:
